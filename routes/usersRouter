@@ -1,0 +1,21 @@
+import express from "express";
+const router = express.Router();
+router.use(express.json());
+
+// 회원가입
+router
+  .route("/")
+  .post((req, res) => {
+    res.json({ message: "렛츠 회원가입" });
+  })
+  .post("/login", (req, res) => {
+    res.json({ message: "로그인임" });
+  })
+  .post("/reset", (req, res) => {
+    res.json({ message: "비밀번호 초기화 요청" });
+  })
+  .put("/reset", (req, res) => {
+    res.json({ message: "비밀번호 재설정" });
+  });
+
+export default router;
