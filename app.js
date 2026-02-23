@@ -9,17 +9,20 @@ app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
 
-import usersRouter from "./routes/usersRouter";
+import usersRouter from "./routes/usersRouter.js";
 app.use("/users", usersRouter);
 
-import cartsRouter from "./routes/cartsRouter";
-app.use("/cart", cartsRouter);
+// import cartsRouter from "./routes/cartsRouter.js";
+// app.use("/cart", cartsRouter);
 
-import likesRouter from "./routes/likesRouter";
-app.use("/likes", likesRouter);
+// import likesRouter from "./routes/likesRouter.js";
+// app.use("/likes", likesRouter);
 
-import orderRouter from "./routes/ordersRouter";
-app.use("/orders", orderRouter);
+// import orderRouter from "./routes/ordersRouter.js";
+// app.use("/orders", orderRouter);
 
-import booksRouter from "./routes/booksRouter";
+import filterRouter from "./routes/filterRouter.js";
+app.use("/category", filterRouter);
+
+import booksRouter from "./routes/booksRouter.js";
 app.use("/books", booksRouter);

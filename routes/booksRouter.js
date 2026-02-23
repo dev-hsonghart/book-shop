@@ -2,17 +2,11 @@ import express from "express";
 const router = express.Router();
 router.use(express.json());
 
-// 상품 조회
-router
-  .route("/")
-  .get((req, res) => {
-    res.json({ message: "전체 책 조회" });
-  })
-  .get("/:bookId", (req, res) => {
-    res.json({ message: "책 개별조회" });
-  })
-  .get((req, res) => {
-    res.json({ message: "카테고리별 조회" });
-  });
+import { body, param } from "express-validator";
+import booksController from "../controller/booksController.js";
+import validate from "../middlewares/validator.js";
 
+// 상품 조회
+router.route("/").get(booksController.getBooks);
+router.get("/:bookId", booksController.getBook);
 export default router;
