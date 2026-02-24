@@ -52,7 +52,7 @@ const booksController = {
       const userId = Number(req.body.userId);
 
       const getBookSql = `SELECT *, (SELECT count(*) FROM likes WHERE likedProductId = books.id )AS likes ,(SELECT EXISTS (SELECT * FROM likes WHERE userId = ? AND likedProductId = ? ))AS liked FROM books 
-LEFT JOIN category ON books.categoryId = category.id WHERE books.id = ?;`;
+LEFT JOIN category ON books.categoryId = category.categoryId WHERE books.id = ?;`;
       const getBookValues = [userId, bookId, bookId];
       const [[getBookRow]] = await conn.query(getBookSql, getBookValues);
 

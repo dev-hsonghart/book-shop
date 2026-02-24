@@ -12,8 +12,8 @@ app.listen(port, () => {
 import usersRouter from "./routes/usersRouter.js";
 app.use("/users", usersRouter);
 
-// import cartsRouter from "./routes/cartsRouter.js";
-// app.use("/cart", cartsRouter);
+import cartsRouter from "./routes/cartsRouter.js";
+app.use("/cart", cartsRouter);
 
 import likesRouter from "./routes/likesRouter.js";
 app.use("/likes", likesRouter);
