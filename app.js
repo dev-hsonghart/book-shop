@@ -15,8 +15,8 @@ app.use("/users", usersRouter);
 // import cartsRouter from "./routes/cartsRouter.js";
 // app.use("/cart", cartsRouter);
 
-// import likesRouter from "./routes/likesRouter.js";
-// app.use("/likes", likesRouter);
+import likesRouter from "./routes/likesRouter.js";
+app.use("/likes", likesRouter);
 
 // import orderRouter from "./routes/ordersRouter.js";
 // app.use("/orders", orderRouter);

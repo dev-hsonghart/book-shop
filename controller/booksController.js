@@ -5,8 +5,7 @@ import { StatusCodes, ReasonPhrases } from "http-status-codes";
 
 const booksController = {
   getBooks: async (req, res) => {
-    // 좋아요 누락, 이미지 경로 누락
-    // 카테고리 쿼리값 유무 쳌
+    // 이미지 경로 누락
     const { categoryId, newBooks, limit, currentPage } = req.query;
     let offset = limit * (currentPage - 1);
 
@@ -15,7 +14,8 @@ const booksController = {
       totalCount: 0,
     };
     let getBooksRows = "";
-    let getBooksSql = "SELECT * FROM books";
+    let getBooksSql =
+      "SELECT *,(SELECT count(*) FROM likes WHERE likedProductId = books.id) AS total_likes FROM books";
     let values = [];
 
     if (categoryId && newBooks) {
@@ -29,7 +29,6 @@ const booksController = {
     }
     getBooksSql += " LIMIT ? OFFSET ?";
     values.push(parseInt(limit), parseInt(offset));
-    console.log(values);
 
     try {
       [getBooksRows] = await conn.query(getBooksSql, values);
@@ -50,11 +49,11 @@ const booksController = {
     //이미지 경로, 좋아요 여부, 좋아요 수 누락
     try {
       let bookId = Number(req.params.bookId);
+      const userId = Number(req.body.userId);
 
-      const getBookSql = `SELECT * FROM books 
-LEFT JOIN category ON books.categoryId = category.id
-WHERE books.id = ?;`;
-      const getBookValues = [bookId];
+      const getBookSql = `SELECT *, (SELECT count(*) FROM likes WHERE likedProductId = books.id )AS likes ,(SELECT EXISTS (SELECT * FROM likes WHERE userId = ? AND likedProductId = ? ))AS liked FROM books 
+LEFT JOIN category ON books.categoryId = category.id WHERE books.id = ?;`;
+      const getBookValues = [userId, bookId, bookId];
       const [[getBookRow]] = await conn.query(getBookSql, getBookValues);
 
       if (getBookRow === undefined) {
