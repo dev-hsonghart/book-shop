@@ -18,8 +18,8 @@ app.use("/cart", cartsRouter);
 import likesRouter from "./routes/likesRouter.js";
 app.use("/likes", likesRouter);
 
-// import orderRouter from "./routes/ordersRouter.js";
-// app.use("/orders", orderRouter);
+import orderRouter from "./routes/ordersRouter.js";
+app.use("/orders", orderRouter);
 
 import filterRouter from "./routes/filterRouter.js";
 app.use("/category", filterRouter);
