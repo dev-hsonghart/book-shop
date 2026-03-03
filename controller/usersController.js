@@ -7,7 +7,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import crypto from "crypto";
-// 회원가입
 
 const usersController = {
   join: async (req, res) => {
@@ -61,11 +60,12 @@ const usersController = {
         //jwt 토큰 발급
         const token = jwt.sign(
           {
+            id: isActive.id,
             email: email,
           },
           process.env.PRIVATE_KEY,
           {
-            expiresIn: "5m",
+            expiresIn: "100y",
             issuer: "hsh",
           },
         );

@@ -2,6 +2,8 @@ import connection from "../mariaDb.js";
 const conn = connection;
 
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import ensureAuthorization from "../middlewares/auth.js";
+import errorHandler from "../utils/errorHandler.js";
 
 const orderController = {
   order: async (req, res) => {
@@ -10,7 +12,6 @@ const orderController = {
       delivery,
       totalCount,
       totalPrice,
-      userId,
       mainBookTitle,
       preOderItems,
     } = req.body;
@@ -19,8 +20,9 @@ const orderController = {
     let orderId;
 
     const connection = await conn.getConnection();
-
     try {
+      const userId = ensureAuthorization(req, res);
+
       await connection.beginTransaction();
 
       // delivery insert
@@ -29,7 +31,7 @@ const orderController = {
         "INSERT INTO delivery (id, address, receiver, contact) VALUES (NULL, ?, ?, ?)";
       const deliveryValues = [address, receiver, contact];
 
-      const [deliveryResult] = await conn.execute(
+      const [deliveryResult] = await connection.execute(
         deliveryInsertSql,
         deliveryValues,
       );
@@ -46,7 +48,7 @@ const orderController = {
         userId,
       ];
 
-      const [orderResult] = await conn.execute(
+      const [orderResult] = await connection.execute(
         ordersInsertSql,
         ordersInsertValues,
       );
@@ -62,7 +64,7 @@ const orderController = {
       ]);
       const orderedItemsSql =
         "INSERT INTO orderedItems (orderedId, bookId, count) VALUES ?";
-      const [orderedResult] = await conn.query(orderedItemsSql, [
+      const [orderedResult] = await connection.query(orderedItemsSql, [
         orderedItemsValues,
       ]);
 
@@ -70,36 +72,28 @@ const orderController = {
         throw new Error("주문 DB에 제대로 삽입되지 못했다");
       }
 
-      // cartItem 삭제 - 초안 api 기준
-      //   const cartItemDeleteSql = "DELETE FROM cartItems WHERE cartItemId IN (?)";
-      //   const cartItemsValues = cartItems.map((item) => item.cartItemId);
-      //   const [cartItemDeleteResult] = await conn.query(cartItemDeleteSql, [
-      //     cartItemsValues,
-      //   ]);
-
-      // cartItems 삭제 - req.body 수정 버전
+      // 주문 요청한 cartItems 삭제
       const cartItemDeleteSql = "DELETE FROM cartItems WHERE cartItemId IN (?)";
-      const [cartItemDeleteResult] = await conn.query(cartItemDeleteSql, [
+      const [cartItemDeleteResult] = await connection.query(cartItemDeleteSql, [
         cartItems,
       ]);
 
       if (cartItemDeleteResult.affectedRows == 0)
-        // return res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
-        throw new Error("장바구니 목록을 지울 수 없어");
+        throw new Error("해당 주문은 이미 주문이 들어갔어");
 
       await connection.commit();
 
       res.status(StatusCodes.CREATED).send(ReasonPhrases.CREATED);
     } catch (error) {
       await connection.rollback();
+      errorHandler(res, error);
       console.log(error);
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(error.message);
     } finally {
       connection.release();
     }
   },
   getOrders: async (req, res) => {
-    const userId = Number(req.body.userId);
+    const userId = ensureAuthorization(req, res);
     let result = [];
 
     const sql =
@@ -120,21 +114,26 @@ const orderController = {
       }));
       res.status(StatusCodes.OK).json(result);
     } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error);
+      errorHandler(res, error);
+      console.log(error);
     }
   },
   getOrderDetail: async (req, res) => {
+    const userId = ensureAuthorization(req, res);
+
     const orderId = Number(req.params.orderId);
-    const sql = `SELECT orderedItems.bookId,  books.title AS bookTitle, books.author, books.price, orderedItems.count 
-                FROM orderedItems LEFT JOIN books 
-                ON orderedItems.bookId = books.id 
-                WHERE orderedId = ?`;
+    const sql = `SELECT orderedItems.bookId, books.title AS bookTitle, books.author, books.price, orderedItems.count 
+                FROM orderedItems 
+                LEFT JOIN books ON orderedItems.bookId = books.id 
+                LEFT JOIN orders ON orderedItems.orderedId = orders.id
+                WHERE orderedId = ? AND orders.userId = ?`;
 
     try {
-      const [result] = await conn.execute(sql, [orderId]);
+      const [result] = await conn.execute(sql, [orderId, userId]);
       res.status(StatusCodes.OK).json(result);
     } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(error);
+      errorHandler(res, error);
+      console.log(error);
     }
   },
 };

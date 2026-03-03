@@ -2,17 +2,20 @@ import connection from "../mariaDb.js";
 const conn = connection;
 
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import ensureAuthorization from "../middlewares/auth.js";
+import errorHandler from "../utils/errorHandler.js";
 
 const cartsController = {
   addCartItem: async (req, res) => {
-    const { bookId, count, userId } = req.body;
-    const addItemSql =
-      "INSERT INTO cartItems (bookId, count, userId) VALUES (?,?,?)";
-    const values = [bookId, count, userId];
-
-    const checkBookIdSql = `SELECT * FROM cartItems WHERE bookId = ${bookId}`;
-
     try {
+      const { bookId, count } = req.body;
+      const userId = ensureAuthorization(req, res);
+
+      const addItemSql =
+        "INSERT INTO cartItems (bookId, count, userId) VALUES (?,?,?)";
+      const values = [bookId, count, userId];
+
+      const checkBookIdSql = `SELECT * FROM cartItems WHERE bookId = ${bookId}`;
       // bookId가 이미 존재한다면, count만 더하기
       const [[checkBookId]] = await conn.query(checkBookIdSql);
 
@@ -29,8 +32,10 @@ const cartsController = {
       }
 
       await conn.query(addItemSql, values);
+
       res.status(StatusCodes.CREATED).send(ReasonPhrases.CREATED);
     } catch (error) {
+      errorHandler(res, error);
       console.log(error);
     }
   },
@@ -51,12 +56,14 @@ const cartsController = {
     }
   },
   getCartItems: async (req, res) => {
-    let { cartItems, userId } = req.body;
-    userId = Number(userId);
-    const checkItemSql = "SELECT * FROM cartItems WHERE userId = ?";
-    const checkItemValue = [userId];
+    let selectedCartItems = req.body;
 
     try {
+      const userId = ensureAuthorization(req, res);
+
+      const checkItemSql = "SELECT * FROM cartItems WHERE userId = ?";
+      let checkItemValue = [userId];
+
       // userId에 맞는 아이템이 있는지 체크
       const [checkResult] = await conn.query(checkItemSql, checkItemValue);
       if (checkResult.length == 0) {
@@ -66,15 +73,16 @@ const cartsController = {
       let getItemsBaseSql =
         "SELECT cartItems.cartItemId, cartItems.count, books.id AS bookId, books.title, books.summary,books.price FROM cartItems LEFT JOIN books ON cartItems.bookId = books.id WHERE userId = ?";
 
-      if (cartItems.length > 0) {
+      if (selectedCartItems.length > 0) {
         // 선택한 장바구니 아이템 조회
         getItemsBaseSql += ` AND cartItemId IN (?)`;
-        checkItemValue.push(cartItems);
+        checkItemValue.push(selectedCartItems);
       }
 
       const [getCartResult] = await conn.query(getItemsBaseSql, checkItemValue);
       return res.status(StatusCodes.OK).json(getCartResult);
     } catch (error) {
+      errorHandler(res, error);
       console.log(error);
     }
   },

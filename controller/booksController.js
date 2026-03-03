@@ -2,6 +2,8 @@ import connection from "../mariaDb.js";
 const conn = connection;
 
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import ensureAuthorization from "../middlewares/auth.js";
+import errorHandler from "../utils/errorHandler.js";
 
 const booksController = {
   getBooks: async (req, res) => {
@@ -9,13 +11,13 @@ const booksController = {
     const { categoryId, newBooks, limit, currentPage } = req.query;
     let offset = limit * (currentPage - 1);
 
-    let getBooks = {
-      items: [],
-      totalCount: 0,
+    let getBooksRes = {
+      items: { item: [] },
+      pageInfo: { currentPage: 0 },
     };
     let getBooksRows = "";
     let getBooksSql =
-      "SELECT *,(SELECT count(*) FROM likes WHERE likedProductId = books.id) AS total_likes FROM books";
+      "SELECT SQL_CALC_FOUND_ROWS *,(SELECT count(*) FROM likes WHERE likedProductId = books.id) AS totalLikes FROM books";
     let values = [];
 
     if (categoryId && newBooks) {
@@ -37,24 +39,32 @@ const booksController = {
         return res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
       }
 
-      getBooks.items = getBooksRows;
-      getBooks.totalCount = getBooksRows.length;
+      const selectFoundRows = "SELECT found_rows() AS totalCounts";
+      const [[foundRowsResult]] = await conn.execute(selectFoundRows);
 
-      return res.status(StatusCodes.OK).json(getBooks);
+      getBooksRes.items.item = getBooksRows;
+      getBooksRes.pageInfo.totalCounts = foundRowsResult.totalCounts;
+      getBooksRes.pageInfo.currentPage = Number(currentPage);
+
+      return res.status(StatusCodes.OK).json(getBooksRes);
     } catch (error) {
       console.log(error);
     }
   },
   getBook: async (req, res) => {
-    //이미지 경로, 좋아요 여부, 좋아요 수 누락
+    //이미지 경로 누락
     try {
       let bookId = Number(req.params.bookId);
-      const userId = Number(req.body.userId);
+      const userId = ensureAuthorization(req, res, false);
 
-      const getBookSql = `SELECT *, (SELECT count(*) FROM likes WHERE likedProductId = books.id )AS likes ,(SELECT EXISTS (SELECT * FROM likes WHERE userId = ? AND likedProductId = ? ))AS liked FROM books 
-LEFT JOIN category ON books.categoryId = category.categoryId WHERE books.id = ?;`;
+      const getBookSql = `SELECT *, 
+                          (SELECT count(*) FROM likes WHERE likedProductId = books.id )AS likes ,
+                          (SELECT EXISTS (SELECT * FROM likes WHERE userId = ? AND likedProductId = ? ))AS liked 
+                          FROM books 
+                          LEFT JOIN category ON books.categoryId = category.categoryId 
+                          WHERE books.id = ?;`;
       const getBookValues = [userId, bookId, bookId];
-      const [[getBookRow]] = await conn.query(getBookSql, getBookValues);
+      const [[getBookRow]] = await conn.execute(getBookSql, getBookValues);
 
       if (getBookRow === undefined) {
         return res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);

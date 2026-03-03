@@ -2,11 +2,14 @@ import connection from "../mariaDb.js";
 const conn = connection;
 
 import { StatusCodes, ReasonPhrases } from "http-status-codes";
+import ensureAuthorization from "../middlewares/auth.js";
+import errorHandler from "../utils/errorHandler.js";
 
 const likeController = {
   addLike: async (req, res) => {
+    const userId = ensureAuthorization(req);
     const bookId = Number(req.params.bookId);
-    const { userId } = req.body;
+
     const addSql = "INSERT INTO likes (userId, likedProductId) VALUES (?,?)";
     const values = [userId, bookId];
 
@@ -14,12 +17,13 @@ const likeController = {
       await conn.query(addSql, values);
       res.status(StatusCodes.CREATED).send(ReasonPhrases.CREATED);
     } catch (error) {
+      errorHandler(res, error);
       console.log(error);
     }
   },
   removeLike: async (req, res) => {
+    const userId = ensureAuthorization(req);
     const bookId = Number(req.params.bookId);
-    const { userId } = req.body;
 
     const values = [bookId, userId];
     const deleteSql =
@@ -34,6 +38,7 @@ const likeController = {
         return res.status(StatusCodes.NOT_FOUND).send(ReasonPhrases.NOT_FOUND);
       }
     } catch (error) {
+      errorHandler(res, error);
       console.log(error);
     }
   },
