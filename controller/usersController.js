@@ -34,6 +34,9 @@ const usersController = {
         res.status(StatusCodes.CREATED).send(ReasonPhrases.CREATED);
       }
     } catch (error) {
+      res
+        .status(StatusCodes.INTERNAL_SERVER_ERROR)
+        .send(ReasonPhrases.INTERNAL_SERVER_ERROR);
       console.log(error);
     }
   },

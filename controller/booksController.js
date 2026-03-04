@@ -16,8 +16,10 @@ const booksController = {
       pageInfo: { currentPage: 0 },
     };
     let getBooksRows = "";
-    let getBooksSql =
-      "SELECT SQL_CALC_FOUND_ROWS *,(SELECT count(*) FROM likes WHERE likedProductId = books.id) AS totalLikes FROM books";
+    let getBooksSql = `SELECT SQL_CALC_FOUND_ROWS *,
+                      (SELECT count(*) FROM likes 
+                      WHERE likedProductId = books.id) AS totalLikes 
+                      FROM books`;
     let values = [];
 
     if (categoryId && newBooks) {
